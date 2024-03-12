@@ -1,6 +1,6 @@
 <template>
     <div class="flex justify-center items-center min-h-screen bg-gray-100 ">
-      <div class="max-w-9xl mx-auto p-4 bg-white rounded-lg shadow-lg border border-gray-300">
+      <div class="max-w-8xl mx-auto p-4 bg-white rounded-lg shadow-lg border border-gray-300">
         <h1 class="text-4xl text-center text-gray-800 mb-5 bold">Expense Tracker</h1>
         <div class="flex">
                 <div class="flex-1 mr-5 max-w-lg">
@@ -31,7 +31,7 @@
                     <td class="border border-gray-300 px-4 py-2">{{ expense.dateTime }}</td>
                     <td class="border border-gray-300 px-4 py-2">{{ expense.item }}</td>
                     <td class="border border-gray-300 px-4 py-2">{{ expense.category }}</td>
-                    <td class="border border-gray-300 px-4 py-2">{{ expense.amount }}</td>
+                    <td class="border border-gray-300 px-4 py-2">₱{{parseFloat(expense.amount ).toFixed(2)}}</td>
                     <td class="border border-gray-300 px-4 py-2">
                       <button @click="editExpense(index)" class="btn-secondary">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
@@ -49,7 +49,7 @@
                 </tbody>
               </table>
             </div>
-            <div class="total-expenses border-t border-gray-300 bold">Total Expenses: {{ totalExpenses }}</div>
+            <div class="total-expenses border-t border-gray-300 bold">Total Expenses: ₱{{parseFloat( totalExpenses ).toFixed(2)}}</div>
           </div>
         </div>
       </div>
@@ -170,6 +170,7 @@ const fetchExpenses = async () => {
 
 
 import { onMounted } from 'vue';
+import { parse } from 'vue/compiler-sfc';
 onMounted(fetchExpenses);
 
 
