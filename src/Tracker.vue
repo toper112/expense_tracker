@@ -1,3 +1,124 @@
+<script setup>
+import { ref, computed } from 'vue';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import db from './firebase/config'; 
+
+const expenses = ref([]);
+const newExpense = ref({
+    item: '',
+    category: '',
+    amount: 0,
+});
+const amountInput = ref('');
+const editingIndex = ref(null);
+
+
+const fetchExpenses = async () => {
+    const q = query(collection(db, 'Expense_tracker'), orderBy('dateTime', 'desc'));
+
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        expenses.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    });
+};
+
+import { onMounted } from 'vue';
+onMounted(fetchExpenses);
+
+
+const addOrUpdateExpense = async () => {
+    if (!newExpense.value.item || !newExpense.value.category || !amountInput.value) {
+        alert('Please fill up all the fields.');
+        return;
+    }
+
+    if (isNaN(parseFloat(amountInput.value))) {
+        alert('Please enter a valid number for the amount.');
+        return;
+    }
+
+    if (editingIndex.value === null) {
+        await addExpense();
+    } else {
+        await updateExpense();
+    }
+};
+
+
+const addExpense = async () => {
+    const dateTime = new Date().toLocaleString();
+    const expense = { ...newExpense.value, amount: parseFloat(amountInput.value), dateTime };
+
+    try {
+        const docRef = await addDoc(collection(db, 'Expense_tracker'), expense);
+        console.log('Expense added with ID: ', docRef.id);
+    } catch (error) {
+        console.error('Error adding expense: ', error);
+    }
+
+    newExpense.value = {
+        item: '',
+        category: '',
+        amount: 0,
+    };
+    amountInput.value = '';
+};
+
+
+const updateExpense = async () => {
+    const expenseId = expenses.value[editingIndex.value].id;
+    const expense = { ...newExpense.value, amount: parseFloat(amountInput.value) };
+
+    try {
+        await updateDoc(doc(db, 'Expense_tracker', expenseId), expense);
+        console.log('Expense updated with ID: ', expenseId);
+    } catch (error) {
+        console.error('Error updating expense: ', error);
+    }
+
+    newExpense.value = {
+        item: '',
+        category: '',
+        amount: 0,
+    };
+    amountInput.value = '';
+    editingIndex.value = null;
+};
+
+
+const deleteExpense = async (id) => {
+    try {
+        await deleteDoc(doc(db, 'Expense_tracker', id));
+        console.log('Expense deleted with ID: ', id);
+    } catch (error) {
+        console.error('Error deleting expense: ', error);
+    }
+};
+
+
+const confirmDelete = (id) => {
+    if (window.confirm('Are you sure you want to delete this expense?')) {
+        deleteExpense(id);
+    }
+};
+
+
+const editExpense = (index) => {
+    const expense = expenses.value[index];
+    newExpense.value = {
+        item: expense.item,
+        category: expense.category,
+        amount: expense.amount,
+    };
+    amountInput.value = expense.amount;
+    editingIndex.value = index;
+};
+
+const totalExpenses = computed(() => {
+    return expenses.value.reduce((total, expense) => total + parseFloat(expense.amount), 0);
+});
+</script>
+
 <template>
     <div class="flex justify-center items-center min-h-screen bg-gray-100 ">
       <div class="max-w-8xl mx-auto p-4 bg-white rounded-lg shadow-lg border border-gray-300">
@@ -15,7 +136,7 @@
                     <button @click="addOrUpdateExpense" class="btn-primary bold">{{ editingIndex === null ? 'Add New Expense' : 'Update Expense' }}</button>
                 </div>
           <div class="flex-1 relative"> 
-            <div class="expenses-table-container border border-gray-300 bold">
+            <div class="tableContainer border border-gray-300 bold">
               <table class="w-full">
                 <thead>
                   <tr>
@@ -113,7 +234,7 @@
       background-color: #d32f2f;
     }
   
-    .expenses-table-container {
+    .tableContainer {
       max-height: 400px;
       overflow-y: auto;
       border: 1px solid #ccc;
@@ -129,140 +250,18 @@
       font-size: 18px;
     }
 
-    .expenses-table-container table button {
+    .tableContainer table button {
     margin-right: 5px; 
   }
 
-  .expenses-table-container table button:last-child {
+  .tableContainer table button:last-child {
     margin-right: 0; 
   }
 
-  .expenses-table-container table button svg {
+  .tableContainer table button svg {
     vertical-align: middle; 
     margin-right: 5px;
   }
   </style>
   
-  
-<script setup>
-import { ref, computed } from 'vue';
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import db from './firebase/config'; 
 
-const expenses = ref([]);
-const newExpense = ref({
-    item: '',
-    category: '',
-    amount: 0,
-});
-const amountInput = ref('');
-const editingIndex = ref(null);
-
-
-const fetchExpenses = async () => {
-    const q = query(collection(db, 'Expense_tracker'), orderBy('dateTime', 'desc'));
-
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        expenses.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    });
-};
-
-
-import { onMounted } from 'vue';
-import { parse } from 'vue/compiler-sfc';
-onMounted(fetchExpenses);
-
-
-const addOrUpdateExpense = async () => {
-    if (!newExpense.value.item || !newExpense.value.category || !amountInput.value) {
-        alert('Please fill up all the fields.');
-        return;
-    }
-
-    if (isNaN(parseFloat(amountInput.value))) {
-        alert('Please enter a valid number for the amount.');
-        return;
-    }
-
-    if (editingIndex.value === null) {
-        await addExpense();
-    } else {
-        await updateExpense();
-    }
-};
-
-
-const addExpense = async () => {
-    const dateTime = new Date().toLocaleString();
-    const expense = { ...newExpense.value, amount: parseFloat(amountInput.value), dateTime };
-
-    try {
-        const docRef = await addDoc(collection(db, 'Expense_tracker'), expense);
-        console.log('Expense added with ID: ', docRef.id);
-    } catch (error) {
-        console.error('Error adding expense: ', error);
-    }
-
-    newExpense.value = {
-        item: '',
-        category: '',
-        amount: 0,
-    };
-    amountInput.value = '';
-};
-
-
-const updateExpense = async () => {
-    const expenseId = expenses.value[editingIndex.value].id;
-    const expense = { ...newExpense.value, amount: parseFloat(amountInput.value) };
-
-    try {
-        await updateDoc(doc(db, 'Expense_tracker', expenseId), expense);
-        console.log('Expense updated with ID: ', expenseId);
-    } catch (error) {
-        console.error('Error updating expense: ', error);
-    }
-
-    newExpense.value = {
-        item: '',
-        category: '',
-        amount: 0,
-    };
-    amountInput.value = '';
-    editingIndex.value = null;
-};
-
-
-const deleteExpense = async (id) => {
-    try {
-        await deleteDoc(doc(db, 'Expense_tracker', id));
-        console.log('Expense deleted with ID: ', id);
-    } catch (error) {
-        console.error('Error deleting expense: ', error);
-    }
-};
-
-
-const confirmDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this expense?')) {
-        deleteExpense(id);
-    }
-};
-
-
-const editExpense = (index) => {
-    const expense = expenses.value[index];
-    newExpense.value = {
-        item: expense.item,
-        category: expense.category,
-        amount: expense.amount,
-    };
-    amountInput.value = expense.amount;
-    editingIndex.value = index;
-};
-
-const totalExpenses = computed(() => {
-    return expenses.value.reduce((total, expense) => total + parseFloat(expense.amount), 0);
-});
-</script>
